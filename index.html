@@ -49,7 +49,7 @@
     <!--
       Project structure expected:
         /index.html
-        /data/parks.geojson   (FeatureCollection of (Multi)Polygons, each with properties.name)
+        /data/national_parks.geojson   (FeatureCollection of (Multi)Polygons, each with properties.name)
         /data/basemap.geojson   (FeatureCollection for Norway coastline/landmass outline)
       Run from a local server or GitHub Pages (fetch() doesn't work from file://)
     -->
@@ -77,12 +77,12 @@
     let parks, coast;
     try{
       [parks, coast] = await Promise.all([
-        d3.json('data/parks.geojson'),
-        d3.json('data/coast.geojson')
+        d3.json('data/national_parks.geojsons.geojson'),
+        d3.json('data/basemap.geojsonon')
       ]);
     } catch (e){
       console.error('Failed to load GeoJSON files:', e);
-      alert('Could not load GeoJSON. Make sure you are running a local server and that /data/parks.geojson and /data/coast.geojson exist.');
+      alert('Could not load GeoJSON. Make sure you are running a local server and that /data/national_parks.geojson and /data/basemap.geojson exist.');
       return;
     }
 
@@ -115,30 +115,30 @@
     const slug = (s) => s.toLowerCase()
       .normalize('NFD').replace(/\p{Diacritic}/gu,'')
       .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
-
+    // Robust name getter supporting common field variants\n    const getName = (f) => f.properties?.name || f.properties?.Name || f.properties?.NAVN || f.properties?.navn || f.properties?.PARK || 'Unknown';\n
     // Draw parks
     const parkSel = gParks.selectAll('path')
-      .data(parks.features.map((f, i) => ({...f, __id: slug(f.properties?.name || `park-${i}`)})))
+      .data(parks.features.map((f, i) => ({...f, __id: slug(getName(f) || `park-${i}`)})))
       .enter()
       .append('path')
       .attr('class', 'park')
       .attr('id', d => `park-${d.__id}`)
       .attr('tabindex', 0)
       .attr('role', 'button')
-      .attr('data-name', d => d.properties?.name || 'Unknown')
+      .attr('data-name', d => getName(d))
       .attr('data-label-id', d => `label-${d.__id}`)
       .attr('d', d => path(d));
 
     // Create labels at polygon centroids
     const labels = gLabels.selectAll('text')
-      .data(parks.features.map((f, i) => ({...f, __id: slug(f.properties?.name || `park-${i}`)})))
+      .data(parks.features.map((f, i) => ({...f, __id: slug(getName(f) || `park-${i}`)})))
       .enter()
       .append('text')
       .attr('class', 'label')
       .attr('id', d => `label-${d.__id}`)
       .attr('x', d => path.centroid(d)[0])
       .attr('y', d => path.centroid(d)[1])
-      .text(d => d.properties?.name || 'Unknown');
+      .text(d => getName(d));
 
     // Toggle helpers
     function togglePark(el){
