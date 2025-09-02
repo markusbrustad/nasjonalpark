@@ -3,170 +3,192 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Norway National Parks — Interactive SVG Map</title>
+  <title>Norway National Parks — GeoJSON → SVG</title>
   <style>
     :root{
       --bg:#f8f9fb;
-      --coast:#d8dee9;
+      --coast:#d8dee9;       /* background coastline fill */
       --park:#b0b7c3;        /* default gray for parks */
-      --park-active:#2bb673; /* green on click */
+      --park-active:#2bb673; /* green when selected */
       --label:#6b7280;       /* default label gray */
       --label-active:#1f2937;/* darker label when active */
       --stroke:#9aa4b2;      /* park stroke */
     }
     html, body {height:100%;}
     body {
-      margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      background:var(--bg);
-      color:#0f172a;
-      display:grid;
-      grid-template-rows:auto 1fr;
+      margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:var(--bg); color:#0f172a; display:grid; grid-template-rows:auto 1fr;
     }
-    header {
-      padding:12px 16px; border-bottom:1px solid #e5e7eb; background:#fff;
-      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
-    }
-    header h1 {font-size:clamp(16px,2.2vw,20px); margin:0; font-weight:650;}
-    .toolbar {margin-left:auto; display:flex; gap:8px;}
-    button{appearance:none; border:1px solid #e5e7eb; background:#fff; padding:8px 10px; border-radius:10px; cursor:pointer}
-    button:disabled{opacity:.5; cursor:not-allowed}
-    .map-wrap{position:relative; overflow:hidden; background:#e9eef5;}
-    svg{display:block; width:100%; height:100%;}
+    header { padding:12px 16px; border-bottom:1px solid #e5e7eb; background:#fff; display:flex; gap:12px; align-items:center; }
+    header h1 { font-size:clamp(16px,2.2vw,20px); margin:0; font-weight:650; }
+    .toolbar { margin-left:auto; display:flex; gap:8px; }
+    button{ appearance:none; border:1px solid #e5e7eb; background:#fff; padding:8px 10px; border-radius:10px; cursor:pointer }
+    button:disabled{ opacity:.5; cursor:not-allowed }
+    .map-wrap{ position:relative; overflow:hidden; background:#e9eef5; }
+    svg{ display:block; width:100%; height:100%; }
 
-    /* Map layers */
     .coast { fill: var(--coast); stroke: #c3c9d3; stroke-width: 0.5; }
-    .park { fill: var(--park); stroke: var(--stroke); stroke-width: 0.7; cursor:pointer; transition: fill .15s ease; }
+    .park  { fill: var(--park);  stroke: var(--stroke); stroke-width: 0.7; cursor:pointer; transition: fill .15s ease; }
     .park.active { fill: var(--park-active); }
 
     .label { font-size: 10px; fill: var(--label); pointer-events: none; transition: font-weight .15s ease, fill .15s ease; }
     .label.active { font-weight: 700; fill: var(--label-active); }
 
-    /* Small screens: smaller labels */
     @media (max-width: 480px){ .label{ font-size: 9px; } }
-
-    /* Focus ring for keyboard users */
     .park:focus { outline: none; filter: drop-shadow(0 0 0.6px #1118); }
   </style>
 </head>
 <body>
   <header>
-    <h1>Norway National Parks — Interactive SVG</h1>
+    <h1>Norway National Parks — GeoJSON</h1>
     <div class="toolbar">
       <button id="resetBtn" title="Reset zoom">Reset</button>
     </div>
   </header>
   <div class="map-wrap">
     <!--
-      IMPORTANT:
-      1) The SVG below is a stub so you can test interactions.
-      2) Replace the <g id="parks"> and <g id="labels"> contents with real SVG paths & text generated from your GeoJSON/TopoJSON.
-      3) Keep the ids and data-label-id attributes in sync (e.g., park-xxx <-> label-xxx).
-      4) Keep everything inside the <g id="viewport"> group; zoom/pan transform is applied to that group.
+      Project structure expected:
+        /index.html
+        /data/parks.geojson   (FeatureCollection of (Multi)Polygons, each with properties.name)
+        /data/coast.geojson   (FeatureCollection for Norway coastline/landmass outline)
+      Run from a local server or GitHub Pages (fetch() doesn't work from file://)
     -->
-
-    <svg id="map" viewBox="0 0 1000 1600" role="img" aria-label="Interactive map of Norway with national parks">
+    <svg id="map" viewBox="0 0 1000 1600" role="img" aria-label="Interactive map of Norway with national parks (GeoJSON)">
       <g id="viewport">
-        <!-- STATIC BACKGROUND LAYER (simplified coast outline for demo) -->
-        <g id="background">
-          <!-- Replace with a high-quality Norway coastline polygon/path -->
-          <path class="coast" d="M50,1500 L100,1200 L200,1100 L250,900 L300,800 L400,700 L450,600 L500,500 L550,450 L600,420 L700,400 L800,380 L900,360 L950,340 L980,320 L990,300 L950,250 L900,220 L800,200 L700,210 L620,230 L560,260 L520,300 L480,360 L430,420 L380,480 L320,560 L270,640 L220,740 L180,840 L150,950 L120,1100 L90,1300 Z" />
-        </g>
-
-        <!-- NATIONAL PARKS (DEMO POLYGONS) -->
-        <g id="parks" aria-label="National parks">
-          <!-- Dovrefjell-Sunndalsfjella (dummy geometry) -->
-          <path id="park-dovrefjell" class="park" tabindex="0" data-name="Dovrefjell–Sunndalsfjella" data-label-id="label-dovrefjell"
-            d="M470,720 L540,700 L590,740 L560,800 L490,810 Z" />
-
-          <!-- Jotunheimen (dummy geometry) -->
-          <path id="park-jotunheimen" class="park" tabindex="0" data-name="Jotunheimen" data-label-id="label-jotunheimen"
-            d="M420,820 L500,840 L560,880 L530,930 L450,940 L400,900 Z" />
-
-          <!-- Hardangervidda (dummy geometry) -->
-          <path id="park-hardangervidda" class="park" tabindex="0" data-name="Hardangervidda" data-label-id="label-hardangervidda"
-            d="M300,980 L420,980 L520,1000 L540,1060 L460,1100 L360,1100 L290,1050 Z" />
-        </g>
-
-        <!-- LABELS (match ids via data-label-id) -->
-        <g id="labels" aria-hidden="true">
-          <text id="label-dovrefjell" class="label" x="535" y="765">Dovrefjell–Sunndalsfjella</text>
-          <text id="label-jotunheimen" class="label" x="500" y="900">Jotunheimen</text>
-          <text id="label-hardangervidda" class="label" x="450" y="1070">Hardangervidda</text>
-        </g>
+        <!-- Layers will be injected here by JS -->
+        <g id="background"></g>
+        <g id="parks"></g>
+        <g id="labels" aria-hidden="true"></g>
       </g>
     </svg>
   </div>
 
-  <!-- D3 for the tiny bit of zoom/pan ergonomics -->
   <script src="https://unpkg.com/d3@7/dist/d3.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
-    (function(){
-      const svg = d3.select('#map');
-      const viewport = d3.select('#viewport');
-      const parks = d3.selectAll('.park');
-      const resetBtn = document.getElementById('resetBtn');
+  (async function(){
+    const svg = d3.select('#map');
+    const viewport = d3.select('#viewport');
+    const gCoast = d3.select('#background');
+    const gParks = d3.select('#parks');
+    const gLabels = d3.select('#labels');
+    const resetBtn = document.getElementById('resetBtn');
 
-      // Toggle active class on park + matching label
-      function togglePark(el){
-        const park = d3.select(el);
-        const label = d3.select('#' + park.attr('data-label-id'));
-        const isActive = park.classed('active');
-        park.classed('active', !isActive);
-        label.classed('active', !isActive);
-      }
+    // Load GeoJSON
+    let parks, coast;
+    try{
+      [parks, coast] = await Promise.all([
+        d3.json('data/parks.geojson'),
+        d3.json('data/coast.geojson')
+      ]);
+    } catch (e){
+      console.error('Failed to load GeoJSON files:', e);
+      alert('Could not load GeoJSON. Make sure you are running a local server and that /data/parks.geojson and /data/coast.geojson exist.');
+      return;
+    }
 
-      // Click + keyboard activation
-      parks.on('click', (event)=> togglePark(event.currentTarget));
-      parks.on('keydown', (event)=>{
-        if(event.key === 'Enter' || event.key === ' '){
-          event.preventDefault();
-          togglePark(event.currentTarget);
-        }
-      });
+    // Basic checks
+    if(!parks || !parks.features || !coast || !coast.features){
+      alert('Invalid GeoJSON format. Expected FeatureCollection with a features array.');
+      return;
+    }
 
-      // D3 zoom: slight zoom only (1x to 4x)
-      const zoom = d3.zoom()
-        .scaleExtent([1, 4])
-        .on('zoom', (event)=>{
-          viewport.attr('transform', event.transform);
-        });
+    // Set up projection & path, auto-fit to both layers
+    const vb = svg.attr('viewBox').split(' ').map(Number); // [0,0,1000,1600]
+    const w = vb[2], h = vb[3];
 
-      svg.call(zoom);
+    // Use a Mercator projection centered on Norway; fit to combined bounds
+    const projection = d3.geoMercator();
+    const path = d3.geoPath(projection);
 
-      // Reset button resets zoom and clears selection
-      resetBtn.addEventListener('click', ()=>{
-        svg.transition().duration(250).call(zoom.transform, d3.zoomIdentity);
-        d3.selectAll('.park.active').classed('active', false);
-        d3.selectAll('.label.active').classed('active', false);
-      });
+    const combined = { type: 'FeatureCollection', features: [...coast.features, ...parks.features] };
+    projection.fitSize([w, h], combined);
 
-      // Optional: zoom to feature on double click
-      parks.on('dblclick', (event)=>{
+    // Draw coastline/background
+    gCoast.selectAll('path')
+      .data(coast.features)
+      .enter()
+      .append('path')
+      .attr('class', 'coast')
+      .attr('d', path);
+
+    // Utility: slugify park names for ids
+    const slug = (s) => s.toLowerCase()
+      .normalize('NFD').replace(/\p{Diacritic}/gu,'')
+      .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+    // Draw parks
+    const parkSel = gParks.selectAll('path')
+      .data(parks.features.map((f, i) => ({...f, __id: slug(f.properties?.name || `park-${i}`)})))
+      .enter()
+      .append('path')
+      .attr('class', 'park')
+      .attr('id', d => `park-${d.__id}`)
+      .attr('tabindex', 0)
+      .attr('role', 'button')
+      .attr('data-name', d => d.properties?.name || 'Unknown')
+      .attr('data-label-id', d => `label-${d.__id}`)
+      .attr('d', d => path(d));
+
+    // Create labels at polygon centroids
+    const labels = gLabels.selectAll('text')
+      .data(parks.features.map((f, i) => ({...f, __id: slug(f.properties?.name || `park-${i}`)})))
+      .enter()
+      .append('text')
+      .attr('class', 'label')
+      .attr('id', d => `label-${d.__id}`)
+      .attr('x', d => path.centroid(d)[0])
+      .attr('y', d => path.centroid(d)[1])
+      .text(d => d.properties?.name || 'Unknown');
+
+    // Toggle helpers
+    function togglePark(el){
+      const park = d3.select(el);
+      const label = d3.select('#' + park.attr('data-label-id'));
+      const isActive = park.classed('active');
+      park.classed('active', !isActive);
+      label.classed('active', !isActive);
+    }
+
+    parkSel.on('click', (event)=> togglePark(event.currentTarget));
+    parkSel.on('keydown', (event)=>{
+      if(event.key === 'Enter' || event.key === ' '){
         event.preventDefault();
-        const node = event.currentTarget;
-        const bbox = node.getBBox();
-        const svgEl = svg.node();
-        const {width, height} = svgEl.getBoundingClientRect();
+        togglePark(event.currentTarget);
+      }
+    });
 
-        const scale = Math.min(4, Math.max(1, Math.min(
-          width / (bbox.width * 1.5),
-          height / (bbox.height * 1.5)
-        )));
-
-        const tx = width/2 - scale * (bbox.x + bbox.width/2);
-        const ty = height/2 - scale * (bbox.y + bbox.height/2);
-
-        const t = d3.zoomIdentity.translate(tx, ty).scale(scale);
-        svg.transition().duration(350).call(zoom.transform, t);
+    // Zoom (1x to 4x), applied to the viewport group
+    const zoom = d3.zoom()
+      .scaleExtent([1,4])
+      .on('zoom', (event)=>{
+        viewport.attr('transform', event.transform);
       });
+    svg.call(zoom);
 
-      // Help: announce focus name for screen readers
-      parks.attr('role','button').attr('aria-pressed','false');
-      parks.on('focus', (event)=>{
-        const name = d3.select(event.currentTarget).attr('data-name');
-        svg.attr('aria-label', `Interactive map — focused: ${name}`);
-      });
-    })();
+    // Reset button resets zoom and clears selections
+    resetBtn.addEventListener('click', ()=>{
+      svg.transition().duration(250).call(zoom.transform, d3.zoomIdentity);
+      d3.selectAll('.park.active').classed('active', false);
+      d3.selectAll('.label.active').classed('active', false);
+    });
+
+    // Optional: double-click to zoom-to-feature
+    parkSel.on('dblclick', (event, d)=>{
+      event.preventDefault();
+      const node = event.currentTarget;
+      const bbox = node.getBBox();
+      const svgEl = svg.node();
+      const {width, height} = svgEl.getBoundingClientRect();
+      const scale = Math.min(4, Math.max(1, Math.min(
+        width / (bbox.width * 1.5),
+        height / (bbox.height * 1.5)
+      )));
+      const tx = width/2 - scale * (bbox.x + bbox.width/2);
+      const ty = height/2 - scale * (bbox.y + bbox.height/2);
+      const t = d3.zoomIdentity.translate(tx, ty).scale(scale);
+      svg.transition().duration(350).call(zoom.transform, t);
+    });
+  })();
   </script>
 </body>
 </html>
